@@ -34,13 +34,9 @@ export function SubstrateProvider(props) {
       reducer,
       initialReducer,
   );
-
-  const { api, apiStatus, socket } = state;
-
-  /*useEffect(() => {
+  useEffect(() => {
     connect(state, dispatch);
-  }, [state]);*/
-  connect(state, dispatch);
+  }, [state])
   console.log('state', state);
   return (
       <SubstrateContext.Provider value={{...state}}>
