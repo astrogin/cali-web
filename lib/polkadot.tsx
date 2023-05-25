@@ -1,10 +1,17 @@
-'use client'
+'use client';
 import {createContext, useContext, useEffect, useReducer} from 'react';
 import {ApiPromise, WsProvider} from '@polkadot/api';
 import config from '../config';
+import {keyring, Keyring} from '@polkadot/ui-keyring';
+import {cryptoWaitReady} from '@polkadot/util-crypto';
 
 const connectedSocket = config.PROVIDER_SOCKET;
-const initialReducer = {api: null, apiStatus: 'new', socket: connectedSocket};
+const initialReducer = {
+  api: null,
+  apiStatus: 'new',
+  socket: connectedSocket,
+  keyring: new Keyring(),
+};
 
 const SubstrateContext = createContext(initialReducer);
 
@@ -23,7 +30,14 @@ const connect = (state, dispatch) => {
   _api.on('connected', () => {
     //dispatch({type: 'connect', api: _api});
     // `ready` event is not emitted upon reconnection and is checked explicitly here.
-    _api.isReady.then(_api => dispatch({type: 'connect', api: _api}));
+    _api.isReady.then(_api => {
+      cryptoWaitReady().then(() => {
+        // load all available addresses and accounts
+        keyring.loadAll({ss58Format: 42, type: 'sr25519'});
+        dispatch({type: 'connect', api: _api, keyring: keyring});
+        // additional initialization here, including rendering
+      });
+    });
   });
   /*_api.on('ready', () => dispatch({type: 'CONNECT_SUCCESS'}));
   _api.on('error', err => dispatch({type: 'CONNECT_ERROR', payload: err}));*/
@@ -36,7 +50,8 @@ export function SubstrateProvider(props) {
   );
   useEffect(() => {
     connect(state, dispatch);
-  }, [state])
+  }, [state]);
+
   console.log('state', state);
   return (
       <SubstrateContext.Provider value={{...state}}>
@@ -46,12 +61,12 @@ export function SubstrateProvider(props) {
 }
 
 function reducer(state, action) {
-  console.log('action', action);
   switch (action.type) {
     case 'connect': {
       return {
         ...state,
         api: action.api,
+        keyring: action.keyring,
         status: 'connection',
       };
     }
@@ -60,4 +75,5 @@ function reducer(state, action) {
     }
   }
 }
+
 export const useSubstrate = () => useContext(SubstrateContext);
