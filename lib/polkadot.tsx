@@ -11,9 +11,11 @@ const initialReducer = {
   apiStatus: 'new',
   socket: connectedSocket,
   keyring: new Keyring(),
+  profileAddress: null,
 };
 
-const SubstrateContext = createContext(initialReducer);
+const SubstrateContext = createContext(initialReducer as any);
+const SubstrateReducerDispatchContext = createContext(null as any);
 
 const connect = (state, dispatch) => {
   const {api, socket} = state;
@@ -48,6 +50,7 @@ export function SubstrateProvider(props) {
       reducer,
       initialReducer,
   );
+
   useEffect(() => {
     connect(state, dispatch);
   }, [state]);
@@ -55,7 +58,9 @@ export function SubstrateProvider(props) {
   console.log('state', state);
   return (
       <SubstrateContext.Provider value={{...state}}>
-        {props.children}
+        <SubstrateReducerDispatchContext.Provider value={dispatch}>
+          {props.children}
+        </SubstrateReducerDispatchContext.Provider>
       </SubstrateContext.Provider>
   );
 }
@@ -70,6 +75,12 @@ function reducer(state, action) {
         status: 'connection',
       };
     }
+    case 'saveAddress': {
+      return {
+        ...state,
+        profileAddress: action.profileAddress,
+      };
+    }
     default: {
       throw Error('Unknown action: ' + action.type);
     }
@@ -77,3 +88,5 @@ function reducer(state, action) {
 }
 
 export const useSubstrate = () => useContext(SubstrateContext);
+export const useSubstrateDispatch = () => useContext(
+    SubstrateReducerDispatchContext);
